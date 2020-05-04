@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
+# import matplotlib.pyplot as plt
+# import seaborn as sns
 import streamlit as st 
 
 from datetime import datetime
@@ -31,6 +31,7 @@ def data_regiao(regiao, df):
     return dfr
 
 
+@st.cache()
 def plot_estado(dfe, estado, mode, color):
     trace = [go.Bar(x = dfe["Data"], 
                 y = dfe[mode],
@@ -45,6 +46,7 @@ def plot_estado(dfe, estado, mode, color):
     return(fig)
 
 
+@st.cache()
 def plot_regiao(dfr, regiao, mode, colorint, colorstepint):
 
     estados = list(dfr["Estado"].unique())
@@ -69,6 +71,7 @@ def plot_regiao(dfr, regiao, mode, colorint, colorstepint):
     return(fig)
 
 
+@st.cache()
 def plot_brasil(df, mode, colorint, colorstepint):
 
     regioes = list(df["Região"].unique())
@@ -101,9 +104,6 @@ def TimeStempToStr(ts):
         return aux3
     except:
         return ts
-
-
-
 
 
 @st.cache()
@@ -140,7 +140,7 @@ def forecast(df, length_generator, fc_period):
         
 
     forecast = full_scaler.inverse_transform(forecast)
-    forecast_index = pd.date_range(start="2020-05-04", periods=forecast_period, freq="D")
+    forecast_index = pd.date_range(start="2020-05-05", periods=forecast_period, freq="D")
     forecast_df = pd.DataFrame(data=forecast,index=forecast_index,columns=["Forecast"])
     forecast_df["Forecast"] = forecast_df["Forecast"].apply(lambda x: int(x))
   
@@ -194,7 +194,7 @@ def plot_previsao_estado(df, estado, color1, color2):
 def plot_previsao_regiao(df, regiao, color1, color2):
     dfr = data_regiao(regiao, df)
 
-    return plot_previsao(dfe, regiao, color1, color2)
+    return plot_previsao(dfr, regiao, color1, color2)
 
 
 @st.cache()
@@ -245,15 +245,21 @@ def plot_previsao_obt_estado(df, estado, color1, color2):
 def plot_previsao_obt_regiao(df, regiao, color1, color2):
     dfr = data_regiao(regiao, df)
 
-    return plot_obt_previsao(dfe, regiao, color1, color2)
+    return plot_obt_previsao(dfr, regiao, color1, color2)
 
 
 
 
 
 ####################################################################
-st.title("COVID-19 Brasil")
+st.title("COVID-19 Brasil - Análise e Previsão")
 
+st.info(''' Esta aplicação tem como objetivo apresentar uma análise regional de COVID-19 no Brasil, 
+                exibindo de forma gráfica os casos confirmados e número de óbitos. Os dados foram retirados do 
+                [painel oficial do Ministério da Saúde](https://covid.saude.gov.br/), atualizado em: 17:30 03/05/2020. O diferencial desta aplição,
+                é capacidade de realizar uma previsão dos novos casos de COVID-19 para as próximas duas semanas. 
+                Todas as **previsões foram realizadas utilizando Redes Neurais Recorrentes** e TensowFlow. O link 
+                com o **código fonte** deste *dashboard* se encontra no final da página. ''')
 
 df = pd.read_csv("arquivo_geral.csv", sep=";")
 df.rename(columns={"regiao":"Região", "estado":"Estado", "data":"Data", 
@@ -268,11 +274,9 @@ caso = "Casos Acumulados"
 obito = "Óbitos Acumulados"
 
 
+st.markdown("---")
 ###############################################################
 st.title("Casos confirmados no Brasil")
-
-if st.checkbox("Mostrar todos os dados do Brasil"):
-    st.write(df)
 
 st.markdown("**Casos**")
 
@@ -292,9 +296,6 @@ st.title("Casos confirmados por região")
 regiao = st.selectbox("Selecione uma regiao: ", siglas_regiao)
 dfr = data_regiao(regiao, df)
 
-if st.checkbox("Mostrar todos os dados de {}".format(regiao)):
-    st.table(dfr)
-
 st.markdown("**Casos**")
 
 figr = plot_regiao(dfr, regiao, caso, 123456, 98765)
@@ -312,9 +313,6 @@ st.title("Casos confirmados por estados")
 
 estado = st.selectbox("Selecione um estado: ", siglas_estados)
 dfe = data_estado(estado, df)
-
-if st.checkbox("Mostrar todos os dados de {}".format(estado)):
-    st.table(dfe)
 
 st.markdown("**Casos**")
 
@@ -334,8 +332,8 @@ st.plotly_chart(figeo)
 
 ####################################################################
 ####################################################################
-
-st.title("Previsão de casos no Brasil")
+st.markdown("---")
+st.title("Previsão dos novos casos de COVID-19 no Brasil")
 st.warning("A previsão pode demorar alguns segundos.")
 
 st.markdown("**Casos**")
@@ -379,8 +377,7 @@ if st.checkbox("Plotar previsão de óbitos por estado"):
     st.plotly_chart(plot_previsao_obt_estado(df, prev_estado, "#427350", "#e39d53"))
 
 
-
-
-
-
-
+################################################################################
+st.markdown("---")
+st.info("**Autor:** [Rafael Loni](https://www.linkedin.com/in/rafael-loni/) ")
+st.info("**Código Fonte:** [GitHub](https://github.com/rafaelloni) ")
