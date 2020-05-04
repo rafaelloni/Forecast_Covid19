@@ -103,19 +103,15 @@ def TimeStempToStr(ts):
         return ts
 
 
+
+
+
 @st.cache()
-def plot_previsao(df, local, color1, color2):
-    ncasos = df.groupby("Data").sum()["Casos Acumulados"].values
-    date = df.groupby("Data").sum()["Casos Acumulados"].index
-
-    dfcasos = pd.DataFrame(data=ncasos,index=date,columns=["Número de Casos"])
-    dfcasos.loc[dfcasos["Número de Casos"] == 0, "Número de Casos"] = None
-    dfcasos.dropna(inplace=True)
-
+def forecast(df, length_generator, fc_period):
     full_scaler = MinMaxScaler()
-    scaled_full_data = full_scaler.fit_transform(dfcasos)
+    scaled_full_data = full_scaler.fit_transform(df)
 
-    length = 12
+    length = length_generator
     n_features = 1
     generator = TimeseriesGenerator(scaled_full_data, scaled_full_data, length=length, batch_size=1)
 
@@ -127,7 +123,7 @@ def plot_previsao(df, local, color1, color2):
 
 
     forecast = []
-    forecast_period = 10
+    forecast_period = fc_period
     first_eval_batch  = scaled_full_data[-length:]
     current_batch = first_eval_batch.reshape((1,length,n_features))
 
@@ -144,18 +140,31 @@ def plot_previsao(df, local, color1, color2):
         
 
     forecast = full_scaler.inverse_transform(forecast)
-    forecast_index = pd.date_range(start="2020-04-30", periods=forecast_period, freq="D")
+    forecast_index = pd.date_range(start="2020-05-04", periods=forecast_period, freq="D")
     forecast_df = pd.DataFrame(data=forecast,index=forecast_index,columns=["Forecast"])
+    forecast_df["Forecast"] = forecast_df["Forecast"].apply(lambda x: int(x))
+  
+    return forecast_df
+
+
+@st.cache()
+def plot_previsao(df, local, color1, color2):
+    ncasos = df.groupby("Data").sum()["Casos Acumulados"].values
+    date = df.groupby("Data").sum()["Casos Acumulados"].index
+
+    dfcasos = pd.DataFrame(data=ncasos,index=date,columns=["Número de Casos"])
+    dfcasos.loc[dfcasos["Número de Casos"] == 0, "Número de Casos"] = None
+    dfcasos.dropna(inplace=True)
+
+    forecast_df = forecast(dfcasos, 20, 10)
 
     dfresult = pd.concat([dfcasos, forecast_df])
     dfresult.reset_index(inplace=True)
     dfresult["Data"] = dfresult["index"].apply(TimeStempToStr)
 
-
-
     trace = [go.Bar(x = dfresult["Data"], 
                 y = dfresult["Número de Casos"],
-                name = 'Casos reais',
+                name = 'Casos confirmados',
                 marker = {"color":color1},
                 opacity=0.8), 
                 
@@ -180,6 +189,7 @@ def plot_previsao_estado(df, estado, color1, color2):
 
     return plot_previsao(dfe, estado, color1, color2)
 
+
 @st.cache()
 def plot_previsao_regiao(df, regiao, color1, color2):
     dfr = data_regiao(regiao, df)
@@ -187,74 +197,55 @@ def plot_previsao_regiao(df, regiao, color1, color2):
     return plot_previsao(dfe, regiao, color1, color2)
 
 
+@st.cache()
+def plot_obt_previsao(df, local, color1, color2):
+    nobitos = df.groupby("Data").sum()["Óbitos Acumulados"].values
+    date = df.groupby("Data").sum()["Óbitos Acumulados"].index
 
-    # ncasos = dfe.groupby("Data").sum()["Casos Acumulados"].values
-    # date = dfe.groupby("Data").sum()["Casos Acumulados"].index
+    dfobitos = pd.DataFrame(data=nobitos,index=date,columns=["Número de Óbitos"])
+    dfobitos.loc[dfobitos["Número de Óbitos"] == 0, "Número de Óbitos"] = None
+    dfobitos.dropna(inplace=True)
 
-    # dfcasos = pd.DataFrame(data=ncasos,index=date,columns=["Número de Casos"])
-    # dfcasos.loc[dfcasos["Número de Casos"] == 0, "Número de Casos"] = None
-    # dfcasos.dropna(inplace=True)
+    forecast_df = forecast(dfobitos, 14, 10)
 
-    # full_scaler = MinMaxScaler()
-    # scaled_full_data = full_scaler.fit_transform(dfcasos)
+    dfresult = pd.concat([dfobitos, forecast_df])
+    dfresult.reset_index(inplace=True)
+    dfresult["Data"] = dfresult["index"].apply(TimeStempToStr)
+    dfresult.to_csv("result.csv")
 
-    # length = 12
-    # n_features = 1
-    # generator = TimeseriesGenerator(scaled_full_data, scaled_full_data, length=length, batch_size=1)
-
-    # model = Sequential()
-    # model.add(LSTM(100,activation="relu",input_shape=(length,n_features))) # can add dropout too
-    # model.add(Dense(1))
-    # model.compile(optimizer="adam", loss="mse")
-    # model.fit(generator,epochs=75)
-
-
-    # forecast = []
-    # forecast_period = 10
-    # first_eval_batch  = scaled_full_data[-length:]
-    # current_batch = first_eval_batch.reshape((1,length,n_features))
-
-    # for i in range(forecast_period):
-        
-    #     # get prediction 1 time atamp ahead ([0] is for grabbing just the number insede the brackets)
-    #     current_pred = model.predict(current_batch)[0]
-        
-    #     # store prediction
-    #     forecast.append(current_pred)
-        
-    #     # update batch to now include prediction and drop first value
-    #     current_batch = np.append(current_batch[:,1:,:],[[current_pred]],axis=1)
-        
-
-    # forecast = full_scaler.inverse_transform(forecast)
-    # forecast_index = pd.date_range(start="2020-04-30", periods=forecast_period, freq="D")
-    # forecast_df = pd.DataFrame(data=forecast,index=forecast_index,columns=["Forecast"])
-
-    # dfresult = pd.concat([dfcasos, forecast_df])
-    # dfresult.reset_index(inplace=True)
-    # dfresult["Data"] = dfresult["index"].apply(TimeStempToStr)
-
-
-
-    # trace = [go.Bar(x = dfresult["Data"], 
-    #             y = dfresult["Número de Casos"],
-    #             name = 'Casos reais',
-    #             marker = {"color":"#ffd700"},
-    #             opacity=0.8), 
+    trace = [go.Bar(x = dfresult["Data"], 
+                y = dfresult["Número de Óbitos"],
+                name = 'Óbitos confirmados',
+                marker = {"color":color1},
+                opacity=0.8), 
                 
-    #         go.Bar(x = dfresult["Data"], 
-    #             y = dfresult["Forecast"],
-    #             name = 'Previsão',
-    #             marker = {"color":"#9acd32"},
-    #             opacity=0.8)]
+            go.Bar(x = dfresult["Data"], 
+                y = dfresult["Forecast"],
+                name = 'Previsão',
+                marker = {"color":color2},
+                opacity=0.8)]
 
-    # layout = go.Layout(title='Previsão de COVID-19 por estado - {}'.format(estado),
-    #                 yaxis={'title':"Número de casos"},
-    #                 xaxis={'title': 'Data do registro'})
+    layout = go.Layout(title='Previsão do número de óbitos de COVID-19 no {}'.format(local),
+                    yaxis={'title':"Número de óbitos"},
+                    xaxis={'title': 'Data do registro'})
 
-    # fig2 = go.Figure(data=trace, layout=layout)
+    fig2 = go.Figure(data=trace, layout=layout)
 
-    # return fig2
+    return fig2
+
+
+@st.cache()
+def plot_previsao_obt_estado(df, estado, color1, color2):
+    dfe = data_estado(estado, df)
+
+    return plot_obt_previsao(dfe, estado, color1, color2)
+
+
+@st.cache()
+def plot_previsao_obt_regiao(df, regiao, color1, color2):
+    dfr = data_regiao(regiao, df)
+
+    return plot_obt_previsao(dfe, regiao, color1, color2)
 
 
 
@@ -346,17 +337,31 @@ st.plotly_chart(figeo)
 
 st.title("Previsão de casos no Brasil")
 st.warning("A previsão pode demorar alguns segundos.")
+
+st.markdown("**Casos**")
 if st.checkbox("Plotar previsão"):
-    
     st.plotly_chart(plot_previsao(df, "Brasil", "#a020f0", "#ff1493"))
+
+st.markdown("**Óbitos**")
+if st.checkbox("Plotar previsão de óbitos"):
+    st.plotly_chart(plot_obt_previsao(df, "Brasil", "#fb8e8e", "#fbcd8e"))
+
+
+
 
 #####################################################
 st.title("Previsão de casos por região")
 st.warning("A previsão pode demorar alguns segundos.")
 prev_regiao = st.selectbox("Selecione uma regiao", siglas_regiao)
+
+st.markdown("**Casos**")
 if st.checkbox("Plotar previsão por regiao"):
-    
     st.plotly_chart(plot_previsao_regiao(df, prev_regiao, "#008b8b", "#cd5c5c"))
+
+st.markdown("**Óbitos**")
+if st.checkbox("Plotar previsão de óbitos por região"):
+    st.plotly_chart(plot_previsao_obt_regiao(df, prev_regiao, "#2c34ae", "#71b8cb"))
+
 
 
 
@@ -364,9 +369,15 @@ if st.checkbox("Plotar previsão por regiao"):
 st.title("Previsão de casos por estado")
 st.warning("A previsão pode demorar alguns segundos.")
 prev_estado = st.selectbox("Selecione um estado", siglas_estados)
+
+st.markdown("**Casos**")
 if st.checkbox("Plotar previsão por estado"):
-    
     st.plotly_chart(plot_previsao_estado(df, prev_estado, "#ffd700", "#9acd32"))
+
+st.markdown("**Óbitos**")
+if st.checkbox("Plotar previsão de óbitos por estado"):
+    st.plotly_chart(plot_previsao_obt_estado(df, prev_estado, "#427350", "#e39d53"))
+
 
 
 
