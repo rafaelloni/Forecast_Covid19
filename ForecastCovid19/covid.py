@@ -31,37 +31,61 @@ def data_regiao(regiao, df):
     return dfr
 
 
-def plot_estado(dfe, estado, color):
+def plot_estado(dfe, estado, mode, color):
     trace = [go.Bar(x = dfe["Data"], 
-                y = dfe["Casos Acumulados"],
+                y = dfe[mode],
                 marker = {"color":"{}".format(color)},
                 opacity=0.8)]
 
-    layout = go.Layout(title='Casos de COVID-19 - {}'.format(estado),
-                    yaxis={'title':"Número de casos"},
+    layout = go.Layout(title='{} de COVID-19 - {}'.format(mode,estado),
+                    yaxis={'title':mode},
                     xaxis={'title': 'Data do registro'})
 
     fig = go.Figure(data=trace, layout=layout)
     return(fig)
 
 
-def plot_regiao(dfr, regiao):
+def plot_regiao(dfr, regiao, mode, colorint, colorstepint):
 
     estados = list(dfr["Estado"].unique())
     trace = []
     i = 0
     for estado in estados:
-        color = 123456+i
+        color = colorint+i
         dfe = data_estado(estado, dfr)
         trace.append(go.Bar(x = dfe["Data"], 
-                    y = dfe["Casos Acumulados"],
+                    y = dfe[mode],
                     name="{}".format(estado),
                     marker = {"color":"#{}".format(color)},
                     opacity=0.6))
-        i += 98765
+        i += colorstepint
         
-    layout = go.Layout(title='Casos de COVID-19 - {}'.format(regiao),
-                    yaxis={'title':"Número de casos"},
+    layout = go.Layout(title='{} de COVID-19 - {}'.format(mode,regiao),
+                    yaxis={'title':mode},
+                    xaxis={'title': 'Data do registro'},
+                    barmode="stack")
+
+    fig = go.Figure(data=trace, layout=layout)
+    return(fig)
+
+
+def plot_brasil(df, mode, colorint, colorstepint):
+
+    regioes = list(df["Região"].unique())
+    trace = []
+    i = 0
+    for regiao in regioes:
+        color = colorint+i
+        dfr = data_regiao(regiao, df)
+        trace.append(go.Bar(x = dfr["Data"], 
+                    y = dfr[mode],
+                    name="{}".format(regiao),
+                    marker = {"color":"#{}".format(color)},
+                    opacity=0.6))
+        i += colorstepint
+        
+    layout = go.Layout(title='{} de COVID-19 no Brasil'.format(mode),
+                    yaxis={'title':mode},
                     xaxis={'title': 'Data do registro'},
                     barmode="stack")
 
@@ -77,6 +101,7 @@ def TimeStempToStr(ts):
         return aux3
     except:
         return ts
+
 
 @st.cache()
 def plot_previsao(df, local, color1, color2):
@@ -242,12 +267,33 @@ st.title("COVID-19 Brasil")
 df = pd.read_csv("arquivo_geral.csv", sep=";")
 df.rename(columns={"regiao":"Região", "estado":"Estado", "data":"Data", 
             "casosNovos": "Casos Novos", "casosAcumulados":"Casos Acumulados", 
-            "obitosNovos":"Obitos Novos", "obitosAcumulados":"Obitos Acumulados"}, inplace=True)
+            "obitosNovos":"Óbitos Novos", "obitosAcumulados":"Óbitos Acumulados"}, inplace=True)
 
 siglas_estados = list(df["Estado"].unique())
-#siglas_estados.insert(0,None)
 
 siglas_regiao = list(df["Região"].unique())
+
+caso = "Casos Acumulados"
+obito = "Óbitos Acumulados"
+
+
+###############################################################
+st.title("Casos confirmados no Brasil")
+
+if st.checkbox("Mostrar todos os dados do Brasil"):
+    st.write(df)
+
+st.markdown("**Casos**")
+
+figb = plot_brasil(df, caso, 902030, 12345)
+st.plotly_chart(figb)
+
+st.markdown("**Óbitos**")
+
+figbo = plot_brasil(df, obito, 100000, 12345)
+st.plotly_chart(figbo)
+
+
 
 ###############################################################
 st.title("Casos confirmados por região")
@@ -258,8 +304,15 @@ dfr = data_regiao(regiao, df)
 if st.checkbox("Mostrar todos os dados de {}".format(regiao)):
     st.table(dfr)
 
-figr = plot_regiao(dfr, regiao)
+st.markdown("**Casos**")
+
+figr = plot_regiao(dfr, regiao, caso, 123456, 98765)
 st.plotly_chart(figr)
+
+st.markdown("**Óbitos**")
+
+figro = plot_regiao(dfr, regiao, obito, 678901, 8765)
+st.plotly_chart(figro)
 
 
 
@@ -272,9 +325,15 @@ dfe = data_estado(estado, df)
 if st.checkbox("Mostrar todos os dados de {}".format(estado)):
     st.table(dfe)
 
-fige = plot_estado(dfe, estado, "#ffa07a")
+st.markdown("**Casos**")
+
+fige = plot_estado(dfe, estado, caso, "#ffa07a")
 st.plotly_chart(fige)
 
+st.markdown("**Óbitos**")
+
+figeo = plot_estado(dfe, estado, obito, "#4ba07b")
+st.plotly_chart(figeo)
 
 
 
@@ -282,9 +341,9 @@ st.plotly_chart(fige)
 
 
 
+####################################################################
+####################################################################
 
-
-######################################################
 st.title("Previsão de casos no Brasil")
 st.warning("A previsão pode demorar alguns segundos.")
 if st.checkbox("Plotar previsão"):
