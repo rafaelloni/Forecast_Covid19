@@ -10,4 +10,4 @@ Este é um estudo pessoal de redes neurais recorrentes, a fim de colocar em prá
 
 Também foi realizado um deploy desta apliação como estudo pessoal, o resultado final pode ser acessado a parir do endereço a seguir:
 
-[Predição COVID-19](http://3.19.142.39:8501/)
+[Previsão COVID-19](http://3.19.142.39:8501/)
